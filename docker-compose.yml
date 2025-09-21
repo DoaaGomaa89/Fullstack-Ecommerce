@@ -2,7 +2,6 @@ services:
   db:
     image: mysql:8
     container_name: ecommerce-mysql
-    command: --default-authentication-plugin=mysql_native_password --sql-mode=""
     ports:
       - "3306:3306"
     environment:
