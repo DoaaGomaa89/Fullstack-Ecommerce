@@ -1,10 +1,49 @@
 services:
-  mysql:
+  db:
     image: mysql:8
+    container_name: ecommerce-mysql
+    command: --default-authentication-plugin=mysql_native_password --sql-mode=""
     ports:
       - "3306:3306"
-    volumes:
-      - "./mysql:/var/lib/mysql"
-      - "./db-scripts:/docker-entrypoint-initdb.d"
     environment:
-      - MYSQL_ROOT_PASSWORD=root
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: full-stack-ecommerce
+      MYSQL_USER: springstudent
+      MYSQL_PASSWORD: springstudent
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./db-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./spring-boot rest api
+      dockerfile: Dockerfile
+    container_name: ecommerce-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/full-stack-ecommerce?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: springstudent
+      SPRING_DATASOURCE_PASSWORD: springstudent
+      # Map custom property used by the code for CORS origins (Spring relaxed binding)
+      ALLOWED_ORIGINS: http://localhost
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./angular-ecommerce
+      dockerfile: Dockerfile
+    container_name: ecommerce-frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
